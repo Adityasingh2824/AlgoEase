@@ -1,0 +1,19 @@
+{
+  "name": "@algoease/scripts",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "deploy": "tsx src/deploy.ts",
+    "testnet": "tsx src/testnet-smoke.ts"
+  },
+  "dependencies": {
+    "algosdk": "^3.5.2",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
