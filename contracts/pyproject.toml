@@ -1,0 +1,8 @@
+[project]
+name = "algoease-contracts"
+version = "0.1.0"
+description = "AlgoEase v2 AlgoPy smart contracts"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
