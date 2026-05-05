@@ -1,0 +1,28 @@
+{
+  "name": "algoease",
+  "private": true,
+  "version": "2.0.0",
+  "description": "AlgoEase v2 monorepo",
+  "workspaces": [
+    "frontend",
+    "backend",
+    "scripts"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace frontend",
+    "dev:frontend": "npm run dev --workspace frontend",
+    "dev:backend": "npm run dev --workspace backend",
+    "build": "npm run build --workspace frontend && npm run build --workspace backend",
+    "build:frontend": "npm run build --workspace frontend",
+    "build:backend": "npm run build --workspace backend",
+    "lint": "npm run lint --workspace frontend && npm run lint --workspace backend",
+    "contracts:test": "python -m pytest contracts/tests -q",
+    "contracts:check": "python -m compileall contracts",
+    "scripts:deploy": "npm run deploy --workspace scripts",
+    "scripts:testnet": "npm run testnet --workspace scripts"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
