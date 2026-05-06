@@ -1,0 +1,421 @@
+#pragma version 11
+#pragma typetrack false
+
+// algopy.arc4.ARC4Contract.approval_program() -> uint64:
+main:
+    intcblock 0 1 2 3
+    bytecblock "status" "amount" "client" "freelancer" "work_hash"
+    txn ApplicationID
+    bnz main_after_if_else@2
+    // src/escrow_contract.py:44
+    // self.amount = UInt64(0)
+    bytec_1 // "amount"
+    intc_0 // 0
+    app_global_put
+    // src/escrow_contract.py:45
+    // self.client = Account()
+    bytec_2 // "client"
+    global ZeroAddress
+    app_global_put
+    // src/escrow_contract.py:46
+    // self.freelancer = Account()
+    bytec_3 // "freelancer"
+    global ZeroAddress
+    app_global_put
+    // src/escrow_contract.py:47
+    // self.status = UInt64(STATUS_UNINITIALISED)
+    bytec_0 // "status"
+    intc_0 // 0
+    app_global_put
+    // src/escrow_contract.py:48
+    // self.work_hash = Bytes()
+    bytec 4 // "work_hash"
+    pushbytes 0x
+    app_global_put
+
+main_after_if_else@2:
+    // src/escrow_contract.py:40
+    // class EscrowContract(ARC4Contract):
+    txn NumAppArgs
+    bz main___algopy_default_create@14
+    txn OnCompletion
+    !
+    assert
+    txn ApplicationID
+    assert
+    pushbytess 0xcb890da7 0xe031da70 0xd611dbd8 0xace12c19 0x23e629f7 // method "create_escrow(address,uint64,pay)void", method "submit_work(string)void", method "approve()void", method "release_payment()void", method "refund()void"
+    txna ApplicationArgs 0
+    match create_escrow submit_work approve release_payment refund
+    err
+
+main___algopy_default_create@14:
+    txn OnCompletion
+    !
+    txn ApplicationID
+    !
+    &&
+    return
+
+
+// escrow_contract.EscrowContract.create_escrow[routing]() -> void:
+create_escrow:
+    // src/escrow_contract.py:50
+    // @arc4.abimethod
+    txna ApplicationArgs 1
+    dup
+    len
+    pushint 32
+    ==
+    assert // invalid number of bytes for arc4.static_array<arc4.uint8, 32>
+    txna ApplicationArgs 2
+    dup
+    len
+    pushint 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    txn GroupIndex
+    intc_1 // 1
+    -
+    dup
+    gtxns TypeEnum
+    intc_1 // pay
+    ==
+    assert // transaction type is pay
+    // src/escrow_contract.py:61
+    // assert self.status == STATUS_UNINITIALISED, "escrow already initialised"
+    intc_0 // 0
+    bytec_0 // "status"
+    app_global_get_ex
+    assert // check self.status exists
+    !
+    assert // escrow already initialised
+    // src/escrow_contract.py:63
+    // amount_native = amount.native
+    swap
+    btoi
+    // src/escrow_contract.py:64
+    // assert amount_native > 0, "amount must be > 0"
+    dup
+    assert // amount must be > 0
+    // src/escrow_contract.py:67
+    // assert freelancer_acct != Txn.sender, "freelancer must differ from client"
+    dig 2
+    txn Sender
+    !=
+    assert // freelancer must differ from client
+    // src/escrow_contract.py:69
+    // assert fund.sender == Txn.sender, "payment sender must be client"
+    dig 1
+    gtxns Sender
+    txn Sender
+    ==
+    assert // payment sender must be client
+    // src/escrow_contract.py:71
+    // fund.receiver == Global.current_application_address
+    dig 1
+    gtxns Receiver
+    global CurrentApplicationAddress
+    ==
+    // src/escrow_contract.py:70-72
+    // assert (
+    //     fund.receiver == Global.current_application_address
+    // ), "payment receiver must be app"
+    assert // payment receiver must be app
+    // src/escrow_contract.py:73
+    // assert fund.amount == amount_native, "locked amount mismatch"
+    dig 1
+    gtxns Amount
+    dig 1
+    ==
+    assert // locked amount mismatch
+    // src/escrow_contract.py:74
+    // assert fund.close_remainder_to == Global.zero_address, "close_remainder_to must be zero"
+    dig 1
+    gtxns CloseRemainderTo
+    global ZeroAddress
+    ==
+    assert // close_remainder_to must be zero
+    // src/escrow_contract.py:75
+    // assert fund.rekey_to == Global.zero_address, "rekey_to must be zero"
+    swap
+    gtxns RekeyTo
+    global ZeroAddress
+    ==
+    assert // rekey_to must be zero
+    // src/escrow_contract.py:77
+    // self.client = Txn.sender
+    bytec_2 // "client"
+    txn Sender
+    app_global_put
+    // src/escrow_contract.py:78
+    // self.freelancer = freelancer_acct
+    bytec_3 // "freelancer"
+    uncover 2
+    app_global_put
+    // src/escrow_contract.py:79
+    // self.amount = amount_native
+    bytec_1 // "amount"
+    swap
+    app_global_put
+    // src/escrow_contract.py:80
+    // self.status = UInt64(STATUS_CREATED)
+    bytec_0 // "status"
+    intc_1 // 1
+    app_global_put
+    // src/escrow_contract.py:50
+    // @arc4.abimethod
+    intc_1 // 1
+    return
+
+
+// escrow_contract.EscrowContract.submit_work[routing]() -> void:
+submit_work:
+    // src/escrow_contract.py:82
+    // @arc4.abimethod
+    txna ApplicationArgs 1
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_2 // 2
+    +
+    dig 1
+    len
+    dup
+    uncover 2
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    // src/escrow_contract.py:85
+    // assert Txn.sender == self.freelancer, "only freelancer"
+    txn Sender
+    intc_0 // 0
+    bytec_3 // "freelancer"
+    app_global_get_ex
+    assert // check self.freelancer exists
+    ==
+    assert // only freelancer
+    // src/escrow_contract.py:86
+    // assert self.status == STATUS_CREATED, "invalid status for submit"
+    intc_0 // 0
+    bytec_0 // "status"
+    app_global_get_ex
+    assert // check self.status exists
+    intc_1 // 1
+    ==
+    assert // invalid status for submit
+    // src/escrow_contract.py:89
+    // assert cid_bytes.length > 0, "ipfs_hash required"
+    dup
+    assert // ipfs_hash required
+    // src/escrow_contract.py:90
+    // assert cid_bytes.length <= MAX_CID_BYTES, "ipfs_hash too long"
+    pushint 128
+    <=
+    assert // ipfs_hash too long
+    // src/escrow_contract.py:92
+    // self.work_hash = cid_bytes
+    bytec 4 // "work_hash"
+    swap
+    app_global_put
+    // src/escrow_contract.py:93
+    // self.status = UInt64(STATUS_SUBMITTED)
+    bytec_0 // "status"
+    intc_2 // 2
+    app_global_put
+    // src/escrow_contract.py:82
+    // @arc4.abimethod
+    intc_1 // 1
+    return
+
+
+// escrow_contract.EscrowContract.approve[routing]() -> void:
+approve:
+    // src/escrow_contract.py:98
+    // assert Txn.sender == self.client, "only client"
+    txn Sender
+    intc_0 // 0
+    bytec_2 // "client"
+    app_global_get_ex
+    assert // check self.client exists
+    ==
+    assert // only client
+    // src/escrow_contract.py:99
+    // assert self.status == STATUS_SUBMITTED, "work not submitted"
+    intc_0 // 0
+    bytec_0 // "status"
+    app_global_get_ex
+    assert // check self.status exists
+    intc_2 // 2
+    ==
+    assert // work not submitted
+    // src/escrow_contract.py:100
+    // self.status = UInt64(STATUS_APPROVED)
+    bytec_0 // "status"
+    intc_3 // 3
+    app_global_put
+    // src/escrow_contract.py:95
+    // @arc4.abimethod
+    intc_1 // 1
+    return
+
+
+// escrow_contract.EscrowContract.release_payment[routing]() -> void:
+release_payment:
+    // src/escrow_contract.py:105
+    // assert Txn.sender == self.freelancer, "only freelancer"
+    txn Sender
+    intc_0 // 0
+    bytec_3 // "freelancer"
+    app_global_get_ex
+    assert // check self.freelancer exists
+    swap
+    dig 1
+    ==
+    assert // only freelancer
+    // src/escrow_contract.py:106
+    // assert self.status == STATUS_APPROVED, "approval required"
+    intc_0 // 0
+    bytec_0 // "status"
+    app_global_get_ex
+    assert // check self.status exists
+    intc_3 // 3
+    ==
+    assert // approval required
+    // src/escrow_contract.py:107
+    // assert self.amount > 0, "no funds locked"
+    intc_0 // 0
+    bytec_1 // "amount"
+    app_global_get_ex
+    assert // check self.amount exists
+    dup
+    assert // no funds locked
+    // src/escrow_contract.py:110-114
+    // itxn.Payment(
+    //     receiver=self.freelancer,
+    //     amount=payout,
+    //     fee=0,
+    // ).submit()
+    itxn_begin
+    itxn_field Amount
+    itxn_field Receiver
+    // src/escrow_contract.py:110
+    // itxn.Payment(
+    intc_1 // pay
+    itxn_field TypeEnum
+    // src/escrow_contract.py:113
+    // fee=0,
+    intc_0 // 0
+    itxn_field Fee
+    // src/escrow_contract.py:110-114
+    // itxn.Payment(
+    //     receiver=self.freelancer,
+    //     amount=payout,
+    //     fee=0,
+    // ).submit()
+    itxn_submit
+    // src/escrow_contract.py:116
+    // self.amount = UInt64(0)
+    bytec_1 // "amount"
+    intc_0 // 0
+    app_global_put
+    // src/escrow_contract.py:117
+    // self.status = UInt64(STATUS_RELEASED)
+    bytec_0 // "status"
+    pushint 5
+    app_global_put
+    // src/escrow_contract.py:102
+    // @arc4.abimethod
+    intc_1 // 1
+    return
+
+
+// escrow_contract.EscrowContract.refund[routing]() -> void:
+refund:
+    // src/escrow_contract.py:122
+    // assert Txn.sender == self.client, "only client"
+    txn Sender
+    intc_0 // 0
+    bytec_2 // "client"
+    app_global_get_ex
+    assert // check self.client exists
+    ==
+    assert // only client
+    // src/escrow_contract.py:138
+    // return self.status == STATUS_CREATED or self.status == STATUS_SUBMITTED
+    intc_0 // 0
+    bytec_0 // "status"
+    app_global_get_ex
+    assert // check self.status exists
+    intc_1 // 1
+    ==
+    bnz refund_bool_true@3
+    intc_0 // 0
+    bytec_0 // "status"
+    app_global_get_ex
+    assert // check self.status exists
+    intc_2 // 2
+    ==
+    bz refund_bool_false@4
+
+refund_bool_true@3:
+    intc_1 // 1
+
+refund_bool_merge@5:
+    // src/escrow_contract.py:123
+    // assert self._refundable(), "refund not allowed"
+    assert // refund not allowed
+    // src/escrow_contract.py:124
+    // assert self.amount > 0, "no funds locked"
+    intc_0 // 0
+    bytec_1 // "amount"
+    app_global_get_ex
+    assert // check self.amount exists
+    dup
+    assert // no funds locked
+    // src/escrow_contract.py:127-131
+    // itxn.Payment(
+    //     receiver=self.client,
+    //     amount=rebate,
+    //     fee=0,
+    // ).submit()
+    itxn_begin
+    // src/escrow_contract.py:128
+    // receiver=self.client,
+    intc_0 // 0
+    bytec_2 // "client"
+    app_global_get_ex
+    assert // check self.client exists
+    itxn_field Receiver
+    itxn_field Amount
+    // src/escrow_contract.py:127
+    // itxn.Payment(
+    intc_1 // pay
+    itxn_field TypeEnum
+    // src/escrow_contract.py:130
+    // fee=0,
+    intc_0 // 0
+    itxn_field Fee
+    // src/escrow_contract.py:127-131
+    // itxn.Payment(
+    //     receiver=self.client,
+    //     amount=rebate,
+    //     fee=0,
+    // ).submit()
+    itxn_submit
+    // src/escrow_contract.py:133
+    // self.amount = UInt64(0)
+    bytec_1 // "amount"
+    intc_0 // 0
+    app_global_put
+    // src/escrow_contract.py:134
+    // self.status = UInt64(STATUS_REFUNDED)
+    bytec_0 // "status"
+    pushint 4
+    app_global_put
+    // src/escrow_contract.py:119
+    // @arc4.abimethod
+    intc_1 // 1
+    return
+
+refund_bool_false@4:
+    intc_0 // 0
+    b refund_bool_merge@5
