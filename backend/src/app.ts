@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
+import { escrowRouter } from "./routes/escrow.js";
 import { healthRouter } from "./routes/health.js";
 
 export function createApp() {
@@ -21,6 +22,7 @@ export function createApp() {
     res.json({ name: "AlgoEase API", stack: "Node + Express", contracts: "AlgoPy" });
   });
   app.use("/api/health", healthRouter);
+  app.use("/escrow", escrowRouter);
 
   return app;
 }
