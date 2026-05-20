@@ -1,81 +1,29 @@
-import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import { Header } from "@/components/Header";
+import { ConnectWalletModal } from "@/components/ConnectWalletModal";
 import { EscrowSteps } from "@/components/EscrowSteps";
+import { EscrowActionPanel } from "@/components/EscrowActionPanel";
+import { SubmittedWorkPanel } from "@/components/SubmittedWorkPanel";
 import { getBounty } from "@/data/bounties";
+import type { Bounty } from "@/components/BountyCard";
 import { X402Badge } from "@/components/X402Badge";
 import { PaymentRequiredModal } from "@/components/PaymentRequiredModal";
-import { CounterOfferModal } from "@/components/CounterOfferModal";
 import { useApp } from "@/lib/app-context";
-import type { WalletTxnKind } from "@/lib/wallet/wallet-service";
+import { useCreateBountyFunding } from "@/hooks/useX402Payment";
+import { useEscrow } from "@/hooks/useEscrow";
+import { useEscrowActions } from "@/hooks/useEscrowActions";
+import { formatBountyAsset, mapApiBountyToCard, shortAddress, statusPillClass } from "@/lib/bounties-api";
+import { sameAlgorandAddress } from "@/lib/algorand-address";
 import {
-  ArrowLeft,
-  ArrowLeftRight,
-  Flag,
-  HandHelping,
-  Info,
-  Paperclip,
-  Send,
-  Shield,
-  Sparkles,
-} from "lucide-react";
-
-export const Route = createFileRoute("/bounties/$bountyId")({
-  loader: ({ params }) => {
-    const b = getBounty(params.bountyId);
-    if (!b) throw notFound();
-    return b;
-  },
-  head: ({ loaderData }) => ({
-    meta: [
-      { title: loaderData ? `${loaderData.title} — AlgoEase` : "Bounty — AlgoEase" },
-      { name: "description", content: loaderData?.title ?? "Bounty on AlgoEase" },
-      { property: "og:title", content: loaderData?.title ?? "AlgoEase bounty" },
-      {
-        property: "og:description",
-        content: `Funded in AlgoPy-powered escrow on Algorand. ${loaderData?.goal ?? ""} ALGO goal.`,
-      },
-    ],
-  }),
-  component: BountyDetail,
-  errorComponent: ({ error, reset }) => {
-    const router = useRouter();
-    return (
-      <div className="min-h-screen">
-        <Header />
-        <div className="mx-auto max-w-md px-4 py-20 text-center">
-          <h1 className="font-display text-2xl font-bold">Couldn't load this bounty</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
-          <button
-            type="button"
-            onClick={() => {
-              router.invalidate();
-              reset();
-            }}
-            className="mt-4 pill bg-primary px-4 py-2 text-sm text-primary-foreground"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  },
-  notFoundComponent: () => {
-    const { bountyId } = Route.useParams();
-    return (
-      <div className="min-h-screen">
-        <Header />
-        <div className="mx-auto max-w-md px-4 py-20 text-center">
-          <h1 className="font-display text-3xl font-bold">Bounty not found</h1>
-          <p className="mt-2 text-sm text-muted-foreground">No bounty matches "{bountyId}".</p>
-          <Link to="/bounties" className="mt-4 inline-block pill bg-ink px-4 py-2 text-sm text-ink-foreground">
-            Browse bounties
-          </Link>
-        </div>
-      </div>
-    );
-  },
-});
+  CURRENT_ESCROW_APP_ID,
+  isLegacyNoRejectApp,
+  isLegacyOpenBountyApp,
+  legacyBountyAcceptMessage,
+  resolveEscrowAppId,
+} from "@/lib/algorand-config";
+import { ArrowLeft, ExternalLink, Info, Loader2, Shield } from "lucide-react";
+import { isValidDeliverableRef, parseDeliverableRef } from "@/lib/ipfs";
 
 const toneBg: Record<string, string> = {
   mint: "from-mint to-lilac",
@@ -84,57 +32,284 @@ const toneBg: Record<string, string> = {
   lilac: "from-lilac to-mint",
 };
 
-function discussionForBounty(title: string, category: string) {
-  return {
-    author:
-      category === "Shoutout"
-        ? `Hey! I need a shoutout for my Algorand project — happy to share talking points and assets.`
-        : `Here's the scope for "${title}". Let me know your timeline and how you'd approach delivery.`,
-    builder:
-      category === "Audit"
-        ? `I can deliver a written report plus an AlgoPy-focused review within a few days.`
-        : `I'm interested — I can start right away once escrow is confirmed.`,
-  };
-}
+export const Route = createFileRoute("/bounties/$bountyId")({
+  component: BountyDetail,
+});
 
 function BountyDetail() {
-  const b = Route.useLoaderData();
-  const pct = Math.min(100, Math.round((b.funded / b.goal) * 100));
-  const { author: authorMsg, builder: builderMsg } = useMemo(
-    () => discussionForBounty(b.title, b.category),
-    [b.title, b.category],
-  );
+  const { bountyId } = Route.useParams();
+  const { walletAddress } = useApp();
+  const escrow = useEscrow(bountyId);
+  const actions = useEscrowActions(bountyId, escrow.refetch);
+  const funding = useCreateBountyFunding();
 
-  const { mode } = useApp();
-  const isAgent = mode === "agent";
+  const staticBounty = getBounty(bountyId);
+  const display: Bounty | null = useMemo(() => {
+    if (escrow.bounty) return mapApiBountyToCard(escrow.bounty);
+    if (staticBounty) return staticBounty;
+    return null;
+  }, [escrow.bounty, staticBounty]);
+
+  const hasOnChain = Boolean(escrow.bounty);
+  const escrowStatus = escrow.bounty?.status;
+  const assetLabel = formatBountyAsset(escrow.bounty?.asset);
+  const goal = display?.goal ?? Number(escrow.bounty?.amount ?? 0);
+  const funded = hasOnChain ? goal : (display?.funded ?? 0);
+  const pct = goal > 0 ? Math.min(100, Math.round((funded / goal) * 100)) : 0;
+
+  const clientAddress = escrow.bounty?.client_address ?? "";
+  const assignedFreelancer = escrow.bounty?.freelancer_address ?? null;
+  const isClient =
+    hasOnChain && Boolean(walletAddress) && sameAlgorandAddress(walletAddress, clientAddress);
+  const isAssignedFreelancer =
+    Boolean(assignedFreelancer) &&
+    Boolean(walletAddress) &&
+    sameAlgorandAddress(walletAddress, assignedFreelancer);
+
+  const bountyAppId = resolveEscrowAppId(escrow.bounty?.app_id);
+  const legacyEscrowApp = hasOnChain && isLegacyOpenBountyApp(bountyAppId);
+  const legacyNoReject = hasOnChain && isLegacyNoRejectApp(bountyAppId);
+  const appConfigMismatch = hasOnChain && bountyAppId !== CURRENT_ESCROW_APP_ID;
+
+  const showAccept =
+    hasOnChain &&
+    escrowStatus === "OPEN" &&
+    !isClient &&
+    !assignedFreelancer &&
+    !legacyEscrowApp;
+  const showSubmit = hasOnChain && escrowStatus === "ACCEPTED" && isAssignedFreelancer;
+
+  const showSubmittedWork =
+    hasOnChain &&
+    Boolean(escrow.bounty?.ipfs_cid || escrow.events.some((e) => e.event_type === "SUBMITTED")) &&
+    ["SUBMITTED", "APPROVED", "RELEASED", "REJECTED"].includes(escrowStatus ?? "");
+
   const [payOpen, setPayOpen] = useState(false);
-  const [payAction, setPayAction] = useState("POST /api/bounties/accept");
-  const [payCost, setPayCost] = useState(0.1);
-  const [payTxnKind, setPayTxnKind] = useState<WalletTxnKind>("x402_deposit");
-  const [counterOpen, setCounterOpen] = useState(false);
+  const [payAction, setPayAction] = useState("");
+  const [payCost, setPayCost] = useState(0);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const [ipfsCid, setIpfsCid] = useState("");
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
-  const onBackBounty = () => {
-    setPayAction("POST /api/bounties/accept");
-    setPayCost(0.1);
-    setPayTxnKind("x402_deposit");
+  const modalAsset = funding.challenge?.asset ?? escrow.bounty?.asset ?? "ALGO";
+  const busy =
+    actions.busy ??
+    (funding.stage === "signing" || funding.stage === "submitting" ? "fund" : null);
+
+  useEffect(() => {
+    if (funding.stage === "success") {
+      escrow.refetch();
+      setPayOpen(false);
+      funding.reset();
+    }
+  }, [funding.stage, escrow.refetch, funding.reset]);
+
+  function resolveFundAsset(asset?: string | null): string {
+    if (!asset || asset === "ALGO") return "ALGO";
+    if (asset === "USDC" || asset === "USDC-A") {
+      return import.meta.env.VITE_USDC_ASSET_ID ?? "10458941";
+    }
+    return asset;
+  }
+
+  const onFund = async () => {
+    setActionError(null);
+    if (!walletAddress) {
+      setActionError("Connect your wallet to fund this escrow.");
+      return;
+    }
+    setPayAction("Escrow deposit");
+    setPayCost(Math.round(goal * 1_000_000));
     setPayOpen(true);
+    await funding.fund({
+      task_id: bountyId,
+      title: display?.title ?? `Bounty ${bountyId}`,
+      description: escrow.bounty?.description ?? `Bounty: ${display?.title ?? bountyId}`,
+      deadline_hours: 72,
+      amount: String(goal),
+      asset: resolveFundAsset(escrow.bounty?.asset),
+    });
   };
 
-  const onApprove = () => {
-    setPayAction("POST /api/bounties/approve");
-    setPayCost(0.001);
-    setPayTxnKind("approve");
-    setPayOpen(true);
+  const onApprove = async () => {
+    setActionError(null);
+    if (!walletAddress) {
+      setActionError("Connect your wallet as the client to approve work.");
+      return;
+    }
+    if (!isClient) {
+      setActionError("Only the bounty client can approve work.");
+      return;
+    }
+    try {
+      await actions.approveWork(walletAddress, bountyAppId);
+      setActionSuccess("Work approved — you can release payment when ready.");
+    } catch {
+      /* surfaced via actions.error */
+    }
   };
 
-  const onRefund = () => {
-    setPayAction("POST /api/bounties/refund");
-    setPayCost(0.001);
-    setPayTxnKind("refund");
-    setPayOpen(true);
+  const onReject = async () => {
+    setActionError(null);
+    if (!walletAddress) {
+      setActionError("Connect your wallet as the client to reject this submission.");
+      return;
+    }
+    if (!isClient) {
+      setActionError("Only the bounty client can reject submitted work.");
+      return;
+    }
+    if (escrowStatus !== "SUBMITTED") {
+      setActionError("Work can only be rejected after the freelancer submits it.");
+      return;
+    }
+    try {
+      await actions.rejectWork(walletAddress, bountyAppId);
+      setActionSuccess("Work rejected — escrow refunded to your wallet.");
+    } catch {
+      /* surfaced via actions.error */
+    }
   };
 
-  const offeredAlgo = Math.min(b.funded, b.goal);
+  const onRefund = async () => {
+    setActionError(null);
+    if (!walletAddress) {
+      setActionError("Connect your wallet as the client to request a refund.");
+      return;
+    }
+    if (!isClient) {
+      setActionError("Only the bounty client can request a refund.");
+      return;
+    }
+    try {
+      await actions.refundEscrow(walletAddress, bountyAppId);
+      setActionSuccess("Refund submitted — funds return to your wallet.");
+    } catch {
+      /* surfaced via actions.error */
+    }
+  };
+
+  const onAccept = async () => {
+    setActionError(null);
+    if (!walletAddress) {
+      setActionError("Connect your wallet to accept this bounty.");
+      return;
+    }
+    if (isClient) {
+      setActionError("The client cannot accept their own bounty.");
+      return;
+    }
+    try {
+      await actions.acceptTask(walletAddress, bountyAppId);
+      setActionSuccess("Bounty accepted — you can submit work when ready.");
+    } catch {
+      /* surfaced via actions.error */
+    }
+  };
+
+  const onSubmit = () => setSubmitOpen(true);
+
+  const confirmSubmit = async () => {
+    const ref = ipfsCid.trim();
+    if (!ref) {
+      setActionError("Enter an IPFS CID or https:// link for your deliverable.");
+      return;
+    }
+    if (!isValidDeliverableRef(ref)) {
+      setActionError(
+        "Use a valid IPFS CID (bafy… or Qm…) or a public https:// URL — placeholders like \"xyz\" cannot be opened.",
+      );
+      return;
+    }
+    if (!walletAddress || !isAssignedFreelancer) {
+      setActionError("Connect your wallet as the assigned freelancer to submit work.");
+      return;
+    }
+    setActionError(null);
+    try {
+      await actions.submitWork(walletAddress, ipfsCid.trim(), bountyAppId);
+      setSubmitOpen(false);
+      setIpfsCid("");
+      setActionSuccess("Work submitted — waiting for client approval.");
+    } catch {
+      /* surfaced via actions.error */
+    }
+  };
+
+  const onRelease = async () => {
+    setActionError(null);
+    if (!walletAddress) {
+      setActionError("Connect your wallet as the client to release payment.");
+      return;
+    }
+    if (!isClient) {
+      setActionError("Only the bounty client can release payment.");
+      return;
+    }
+    if (!assignedFreelancer) {
+      setActionError("No freelancer is assigned to this bounty yet.");
+      return;
+    }
+    try {
+      await actions.releasePayment(walletAddress, assignedFreelancer, bountyAppId);
+      setActionSuccess("Payment released to the freelancer.");
+    } catch {
+      /* surfaced via actions.error */
+    }
+  };
+
+  const panelProps = {
+    status: escrowStatus,
+    isClient: !hasOnChain || isClient,
+    walletConnected: Boolean(walletAddress),
+    showAccept,
+    showSubmit,
+    hasOnChain,
+    busy,
+    onFund: !hasOnChain ? onFund : undefined,
+    onAccept: showAccept ? onAccept : undefined,
+    onSubmit: showSubmit ? onSubmit : undefined,
+    onApprove: hasOnChain && isClient && escrowStatus === "SUBMITTED" ? onApprove : undefined,
+    onReject:
+      hasOnChain && isClient && escrowStatus === "SUBMITTED" && !legacyNoReject
+        ? onReject
+        : undefined,
+    onRelease: hasOnChain && isClient ? onRelease : undefined,
+    onRefund:
+      hasOnChain && isClient && (escrowStatus === "OPEN" || escrowStatus === "ACCEPTED")
+        ? onRefund
+        : undefined,
+    onConnectWallet: () => setWalletModalOpen(true),
+  };
+
+  if (escrow.loading && !display) {
+    return (
+      <div className="min-h-screen">
+        <Header />
+        <div className="mx-auto flex max-w-md flex-col items-center gap-3 px-4 py-24 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm">Loading escrow…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!display) {
+    return (
+      <div className="min-h-screen">
+        <Header />
+        <div className="mx-auto max-w-md px-4 py-20 text-center">
+          <h1 className="font-display text-3xl font-bold">Bounty not found</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{escrow.error ?? "No matching bounty."}</p>
+          <Link to="/bounties" className="mt-4 inline-block pill bg-ink px-4 py-2 text-sm text-ink-foreground">
+            Browse bounties
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -149,262 +324,240 @@ function BountyDetail() {
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <X402Badge />
-          {isAgent && <X402Badge variant="required" />}
+          {escrowStatus && (
+            <span className={`pill px-3 py-1 text-xs font-semibold ${statusPillClass(escrowStatus)}`}>
+              {escrowStatus}
+            </span>
+          )}
+          <span className="pill bg-muted px-3 py-1 text-xs font-mono">Escrow app {bountyAppId}</span>
+          {appConfigMismatch && (
+            <span className="pill bg-amber-500/15 px-3 py-1 text-xs text-amber-900 dark:text-amber-200">
+              UI configured for app {CURRENT_ESCROW_APP_ID}
+            </span>
+          )}
         </div>
 
+        {legacyEscrowApp && (
+          <div
+            className="mt-3 flex gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100"
+            role="status"
+          >
+            <Info className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>{legacyBountyAcceptMessage(bountyAppId)}</p>
+          </div>
+        )}
+
+        {legacyNoReject && escrowStatus === "SUBMITTED" && isClient && (
+          <div
+            className="mt-3 flex gap-2 rounded-xl border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground"
+            role="status"
+          >
+            <Info className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>
+              Reject work is only available on app {CURRENT_ESCROW_APP_ID}. This bounty is on app{" "}
+              {bountyAppId} — use Request refund after the deadline, or post a new bounty.
+            </p>
+          </div>
+        )}
+
+        {(actionError || actions.error || funding.error) && (
+          <p className="mt-3 text-sm text-destructive" role="alert">
+            {actionError ?? actions.error ?? funding.error}
+          </p>
+        )}
+
+        {actionSuccess && (
+          <p className="mt-3 text-sm font-medium text-mint-foreground" role="status">
+            {actionSuccess}
+          </p>
+        )}
+
+        {!walletAddress && hasOnChain && showAccept && (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Connect a wallet that is not the client to accept this bounty. You will sign an on-chain{" "}
+            <code className="text-xs">accept_task</code> transaction in Pera or Defly.
+          </p>
+        )}
+
         <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)] lg:gap-10">
-          {/* —— Main column —— */}
           <div className="space-y-6">
             <div className="card-soft overflow-hidden p-6 md:p-8">
-              <div className="flex flex-wrap items-start justify-between gap-3 text-sm text-muted-foreground">
-                <p>
-                  Bounty from: <span className="font-semibold text-foreground">{b.creator}</span>
-                </p>
-                <time dateTime="2026-08-04" className="shrink-0 tabular-nums">
-                  Aug 4
-                </time>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                {hasOnChain ? (
+                  <>
+                    Client: <span className="font-mono text-foreground">{shortAddress(clientAddress, 8, 6)}</span>
+                    {" · "}
+                    Freelancer:{" "}
+                    <span className="font-mono text-foreground">
+                      {assignedFreelancer ? shortAddress(assignedFreelancer, 8, 6) : "Open — anyone can accept"}
+                    </span>
+                  </>
+                ) : (
+                  <>Demo listing · fund to create on-chain escrow (task id: {bountyId})</>
+                )}
+              </p>
               <h1 className="mt-4 font-display text-3xl font-bold leading-tight tracking-tight md:text-4xl">
-                {b.title}
+                {display.title}
               </h1>
+              {escrow.bounty?.description && (
+                <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{escrow.bounty.description}</p>
+              )}
+
+              {showSubmittedWork && (
+                <div className="mt-8">
+                  <SubmittedWorkPanel
+                    ipfsCid={escrow.bounty?.ipfs_cid}
+                    events={escrow.events}
+                    status={escrowStatus}
+                    freelancerAddress={assignedFreelancer}
+                    forClientReview={isClient}
+                  />
+                </div>
+              )}
 
               <div className="mt-8 rounded-2xl border border-border bg-card/60 p-5 md:p-6">
-                <h2 className="text-center font-display text-sm font-semibold text-foreground">Discussion</h2>
+                <h2 className="font-display text-sm font-semibold">Escrow actions</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {isClient && "You are the client. "}
+                  {showAccept && !isClient && "Freelancers can accept with a connected wallet (not the client). "}
+                  {showSubmit && "Submit your deliverable IPFS CID on-chain. "}
+                  {!isClient && !showAccept && !showSubmit && hasOnChain &&
+                    "Connect a wallet to act on this bounty. "}
+                  Client deposits use x402; approve, reject, release, and refund are signed in your wallet.
+                </p>
+                <div className="mt-5">
+                  <EscrowActionPanel {...panelProps} />
+                </div>
 
-                <div className="mt-6 space-y-6">
-                  <Message name="Author" date="Aug 4" text={authorMsg} />
-                  <Message name="Builder" date="Aug 4" text={builderMsg} />
-
-                  <div className="flex gap-3 rounded-2xl bg-lilac/35 px-4 py-3.5 dark:bg-lilac/20">
-                    <HandHelping className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                    <p className="text-sm leading-relaxed text-foreground/90">
-                      Help this bounty reach its funding goal by backing it. You&apos;re only charged if the work is
-                      approved.
-                    </p>
+                {submitOpen && (
+                  <div className="mt-4 space-y-3 rounded-xl border border-border bg-background p-4">
+                    <label className="block text-sm font-medium">Deliverable IPFS CID</label>
+                    <input
+                      value={ipfsCid}
+                      onChange={(e) => setIpfsCid(e.target.value)}
+                      placeholder="bafy… or https://..."
+                      className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm outline-none ring-primary/20 focus:ring"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={confirmSubmit}
+                        className="pill bg-mint px-4 py-2 text-sm font-semibold text-mint-foreground"
+                      >
+                        Submit on-chain
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSubmitOpen(false)}
+                        className="pill border border-border px-4 py-2 text-sm"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
-                </div>
-
-                <div className="mt-6 flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2">
-                  <input
-                    className="min-w-0 flex-1 bg-transparent px-2 text-sm outline-none placeholder:text-muted-foreground"
-                    placeholder="Enter chat"
-                    aria-label="Chat message"
-                  />
-                  <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="Attach">
-                    <Paperclip className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-full bg-primary p-2.5 text-primary-foreground hover:opacity-90"
-                    aria-label="Send"
-                  >
-                    <Send className="h-4 w-4" />
-                  </button>
-                </div>
-
-                <div className="mt-5 flex flex-wrap gap-3">
-                  {!isAgent ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={onBackBounty}
-                        className="inline-flex items-center justify-center gap-2 pill bg-mint px-5 py-2.5 text-sm font-semibold text-mint-foreground hover:opacity-95 transition"
-                      >
-                        <HandHelping className="h-4 w-4" />
-                        Back this bounty
-                      </button>
-                      <button
-                        type="button"
-                        className="pill border border-border bg-card px-5 py-2.5 text-sm font-semibold hover:bg-muted transition"
-                      >
-                        Join the conversation
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={onApprove}
-                        className="inline-flex items-center justify-center gap-2 pill bg-ink px-5 py-2.5 text-sm font-semibold text-ink-foreground hover:opacity-95 transition"
-                      >
-                        <Flag className="h-4 w-4" />
-                        Mark as complete
-                      </button>
-                      <button
-                        type="button"
-                        onClick={onRefund}
-                        className="pill border border-border bg-card px-5 py-2.5 text-sm font-semibold hover:bg-muted transition"
-                      >
-                        Decline
-                      </button>
-                    </>
-                  )}
-                </div>
+                )}
               </div>
             </div>
 
-            <EscrowSteps current={2} />
+            <EscrowSteps status={escrowStatus} />
+
+            {escrow.events.length > 0 && (
+              <div className="card-soft p-5">
+                <h3 className="font-display text-sm font-semibold">On-chain events</h3>
+                <ul className="mt-3 space-y-2 text-sm">
+                  {escrow.events.map((ev) => {
+                    const submittedCid =
+                      ev.event_type === "SUBMITTED" &&
+                      ev.metadata &&
+                      typeof ev.metadata.ipfs_cid === "string"
+                        ? ev.metadata.ipfs_cid
+                        : null;
+                    const deliverable = submittedCid ? parseDeliverableRef(submittedCid) : null;
+                    return (
+                      <li
+                        key={ev.id}
+                        className="border-b border-border/60 pb-2 last:border-0"
+                      >
+                        <div className="flex justify-between gap-2">
+                          <span className="font-medium">{ev.event_type}</span>
+                          <span className="truncate font-mono text-xs text-muted-foreground">
+                            {ev.tx_id ? `${ev.tx_id.slice(0, 12)}…` : "—"}
+                          </span>
+                        </div>
+                        {deliverable?.href && (
+                          <a
+                            href={deliverable.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            View deliverable
+                          </a>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
           </div>
 
-          {/* —— Sidebar —— */}
           <aside className="space-y-4 lg:pt-1">
-            {!isAgent ? (
-              <>
-                <button
-                  type="button"
-                  onClick={onBackBounty}
-                  className="w-full pill bg-mint py-3.5 text-sm font-semibold text-mint-foreground shadow-sm hover:opacity-95 transition"
-                >
-                  <span className="inline-flex items-center justify-center gap-2">
-                    <HandHelping className="h-4 w-4" />
-                    Back this bounty
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className="w-full pill border border-border bg-card py-3.5 text-sm font-semibold hover:bg-muted transition"
-                >
-                  Join the conversation
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={onApprove}
-                  className="w-full pill bg-ink py-3.5 text-sm font-semibold text-ink-foreground hover:opacity-95 transition"
-                >
-                  <span className="inline-flex items-center justify-center gap-2">
-                    <Flag className="h-4 w-4" />
-                    Mark as complete
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={onRefund}
-                  className="w-full pill border border-border bg-card py-3.5 text-sm font-semibold hover:bg-muted transition"
-                >
-                  Decline
-                </button>
-                <div className="relative overflow-hidden rounded-3xl bg-lilac/40 p-5 dark:bg-lilac/25">
-                  <span className="text-2xl leading-none" aria-hidden>
-                    🙂
-                  </span>
-                  <p className="mt-3 font-display text-2xl font-bold tabular-nums">{offeredAlgo} ALGO</p>
-                  <p className="text-sm text-muted-foreground">total offered</p>
-                  <button
-                    type="button"
-                    onClick={() => setCounterOpen(true)}
-                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border border-border bg-card py-2.5 text-sm font-semibold hover:bg-muted transition"
-                  >
-                    <ArrowLeftRight className="h-4 w-4" />
-                    Counter offer
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  className="w-full pill border border-border bg-card py-3 text-sm font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition"
-                >
-                  Contact support
-                </button>
-              </>
-            )}
+            <EscrowActionPanel compact {...panelProps} />
 
-            <div className={`overflow-hidden rounded-3xl bg-gradient-to-br p-1 shadow-sm ${toneBg[b.tone] ?? toneBg.lilac}`}>
+            <div
+              className={`overflow-hidden rounded-3xl bg-gradient-to-br p-1 shadow-sm ${toneBg[display.tone] ?? toneBg.lilac}`}
+            >
               <div className="flex aspect-square items-center justify-center rounded-[1.35rem] bg-card text-7xl">
-                {b.emoji}
+                {display.emoji}
               </div>
             </div>
 
             <div className="card-soft p-5">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="text-sm font-medium tabular-nums text-muted-foreground">{b.funded} ALGO</span>
-                <span className="font-display text-2xl font-bold tabular-nums">{b.goal} ALGO</span>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">funded · goal</p>
-
-              <div className="relative mt-4 h-3 w-full overflow-visible rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${pct}%` }}
-                />
-                <span
-                  className="pointer-events-none absolute top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 text-base drop-shadow-sm"
-                  style={{ left: `${Math.max(8, Math.min(92, pct))}%` }}
-                  aria-hidden
-                >
-                  🙂
+                <span className="text-sm font-medium tabular-nums text-muted-foreground">
+                  {funded} {assetLabel}
+                </span>
+                <span className="font-display text-2xl font-bold tabular-nums">
+                  {goal} {assetLabel}
                 </span>
               </div>
-
+              <p className="mt-1 text-xs text-muted-foreground">in escrow · goal</p>
+              <div className="relative mt-4 h-3 w-full overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+              </div>
               <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                <span>{b.backers} backers</span>
+                <span>{hasOnChain ? "Funded on-chain" : "Not funded yet"}</span>
                 <span className="inline-flex items-center gap-1">
-                  <Shield className="h-3 w-3" /> Escrow
+                  <Shield className="h-3 w-3" /> BoxMap escrow
                 </span>
               </div>
-
               <div className="mt-4 flex items-center justify-center gap-1.5 border-t border-border pt-4 text-xs text-muted-foreground">
                 <Info className="h-3.5 w-3.5 shrink-0" />
-                Funding goal applied
+                Contract app ID {bountyAppId}
               </div>
             </div>
-
-            <div className="card-soft p-5">
-              <div className="text-center font-display text-sm font-semibold">Backers</div>
-              <ul className="mt-4 space-y-3">
-                {[
-                  { n: "Britney J.", h: "@britney.algo", a: 20 },
-                  { n: "Marcus T.", h: "@marcust", a: 50 },
-                  { n: "Yuki K.", h: "@yukik", a: 30 },
-                ].map((u) => (
-                  <li key={u.h} className="flex items-center justify-between gap-2">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <div className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-blush to-lemon" />
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-medium">{u.n}</div>
-                        <div className="truncate text-xs text-muted-foreground">{u.h}</div>
-                      </div>
-                    </div>
-                    <span className="shrink-0 text-sm font-semibold tabular-nums">{u.a} ALGO</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {isAgent && (
-              <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-4 text-center text-xs text-muted-foreground">
-                <Sparkles className="mx-auto mb-2 h-4 w-4 text-primary" />
-                Builder view: counter offers and completion actions use AlgoPy escrow rules on-chain.
-              </div>
-            )}
           </aside>
         </div>
       </div>
 
+      <ConnectWalletModal open={walletModalOpen} onClose={() => setWalletModalOpen(false)} />
+
       <PaymentRequiredModal
         open={payOpen}
-        onClose={() => setPayOpen(false)}
+        onClose={() => {
+          setPayOpen(false);
+          funding.reset();
+        }}
         action={payAction}
         cost={payCost}
-        transactionKind={payTxnKind}
+        asset={modalAsset}
+        stage={funding.stage}
+        txId={funding.txId}
+        error={funding.error}
+        payTo={funding.challenge?.payTo}
       />
-      <CounterOfferModal open={counterOpen} onClose={() => setCounterOpen(false)} requestedAlgo={b.goal} />
-    </div>
-  );
-}
-
-function Message({ name, date, text }: { name: string; date: string; text: string }) {
-  return (
-    <div className="flex items-start gap-3">
-      <div className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-primary to-lilac ring-2 ring-background" />
-      <div className="min-w-0 flex-1">
-        <div className="text-sm">
-          <span className="font-semibold">{name}</span>
-          <span className="ml-2 text-xs text-muted-foreground">{date}</span>
-        </div>
-        <p className="mt-1.5 text-sm leading-relaxed text-foreground/90">{text}</p>
-      </div>
     </div>
   );
 }

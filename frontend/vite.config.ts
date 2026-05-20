@@ -5,6 +5,12 @@ import tailwindcss from "@tailwindcss/vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
+  server: {
+    proxy: {
+      "/escrow": { target: "http://localhost:3001", changeOrigin: true },
+      "/api": { target: "http://localhost:3001", changeOrigin: true },
+    },
+  },
   resolve: {
     alias: {
       buffer: "buffer",

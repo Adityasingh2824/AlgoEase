@@ -8,7 +8,9 @@ export function ModeToggle() {
       <button
         onClick={() => setMode("human")}
         className={`inline-flex items-center gap-1.5 pill px-3 py-1.5 transition ${
-          mode === "human" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          mode === "human"
+            ? "bg-card text-foreground shadow-sm"
+            : "text-muted-foreground hover:text-foreground"
         }`}
       >
         <User className="h-3.5 w-3.5" /> Human
@@ -16,11 +18,15 @@ export function ModeToggle() {
       <button
         onClick={() => setMode("agent")}
         className={`inline-flex items-center gap-1.5 pill px-3 py-1.5 transition ${
-          mode === "agent" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          mode === "agent"
+            ? "bg-primary text-primary-foreground shadow-sm"
+            : "text-muted-foreground hover:text-foreground"
         }`}
       >
         <Bot className="h-3.5 w-3.5" /> Agent
-        <span className="rounded-full bg-mint px-1.5 py-px text-[10px] font-bold text-mint-foreground">x402</span>
+        <span className="rounded-full bg-mint px-1.5 py-px text-[10px] font-bold text-mint-foreground">
+          x402
+        </span>
       </button>
     </div>
   );

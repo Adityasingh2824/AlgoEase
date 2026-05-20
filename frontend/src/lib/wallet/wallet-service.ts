@@ -1,7 +1,8 @@
 export type { WalletType, WalletTxnKind } from "./wallet-types";
 
-let cached: Promise<Awaited<ReturnType<typeof import("./wallet-service.impl").createWalletService>>> | null =
-  null;
+let cached: Promise<
+  Awaited<ReturnType<typeof import("./wallet-service.impl").createWalletService>>
+> | null = null;
 
 export async function ensureWalletService() {
   if (typeof window === "undefined") return null;

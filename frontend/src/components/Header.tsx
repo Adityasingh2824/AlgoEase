@@ -5,11 +5,14 @@ import { LogOut, Search, Wallet } from "lucide-react";
 import { ModeToggle, ThemeToggle } from "./Toggles";
 import { ConnectWalletModal } from "./ConnectWalletModal";
 import { useApp } from "@/lib/app-context";
+import { useEscrowConfig } from "@/hooks/useEscrowConfig";
+import { CURRENT_ESCROW_APP_ID } from "@/lib/algorand-config";
 
 export function Header() {
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { walletAddress, walletBalanceAlgo, disconnectWallet, walletType } = useApp();
+  const escrowConfig = useEscrowConfig();
   const isConnected = Boolean(walletAddress);
   const shortAddress = walletAddress
     ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
@@ -40,7 +43,19 @@ export function Header() {
             <Search className="h-4 w-4" />
             <span>Find a bounty</span>
           </div>
-          <div className="hidden sm:block"><ModeToggle /></div>
+          <span
+            className="hidden md:inline-flex pill bg-muted px-2.5 py-1 text-[10px] font-mono text-muted-foreground"
+            title={
+              escrowConfig.mismatch
+                ? `Frontend app ${CURRENT_ESCROW_APP_ID} ≠ backend ${escrowConfig.backendAppId}`
+                : "Active escrow app"
+            }
+          >
+            App {escrowConfig.backendAppId ?? CURRENT_ESCROW_APP_ID}
+          </span>
+          <div className="hidden sm:block">
+            <ModeToggle />
+          </div>
           <ThemeToggle />
           {!isConnected ? (
             <button
@@ -66,9 +81,13 @@ export function Header() {
               {menuOpen && (
                 <div className="absolute right-0 z-50 mt-2 w-64 rounded-2xl border border-border bg-card p-3 shadow-lg">
                   <p className="text-xs text-muted-foreground">Connected wallet</p>
-                  <p className="mt-1 text-sm font-semibold">{walletType === "pera" ? "Pera Wallet" : "Defly Wallet"}</p>
+                  <p className="mt-1 text-sm font-semibold">
+                    {walletType === "pera" ? "Pera Wallet" : "Defly Wallet"}
+                  </p>
                   <p className="mt-1 text-xs text-muted-foreground break-all">{walletAddress}</p>
-                  <p className="mt-2 text-sm font-medium">{walletBalanceAlgo?.toFixed(3) ?? "0.000"} ALGO</p>
+                  <p className="mt-2 text-sm font-medium">
+                    {walletBalanceAlgo?.toFixed(3) ?? "0.000"} ALGO
+                  </p>
                   <button
                     type="button"
                     onClick={async () => {

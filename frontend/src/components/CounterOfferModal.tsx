@@ -25,7 +25,9 @@ export function CounterOfferModal({
           >
             <X className="h-5 w-5" />
           </button>
-          <h2 className="flex-1 text-center font-display text-lg font-bold">Make a counter offer</h2>
+          <h2 className="flex-1 text-center font-display text-lg font-bold">
+            Make a counter offer
+          </h2>
           <span className="w-9" />
         </div>
 
@@ -35,8 +37,8 @@ export function CounterOfferModal({
         </div>
 
         <p className="mt-6 text-center text-sm leading-relaxed text-muted-foreground">
-          Enter the minimum amount you need to complete this bounty. Your backer will be notified — they can accept and
-          update their pledge, or enable crowdfunding.
+          Enter the minimum amount you need to complete this bounty. Your backer will be notified —
+          they can accept and update their pledge, or enable crowdfunding.
         </p>
 
         <div className="mt-8 flex gap-3">

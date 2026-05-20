@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "deploy": "tsx src/deploy.ts",
-    "testnet": "tsx src/testnet-smoke.ts"
+    "fund-app": "tsx src/fund-app.ts",
+    "testnet": "tsx src/testnet-smoke.ts",
+    "e2e": "tsx src/e2e-test.ts"
   },
   "dependencies": {
     "algosdk": "^3.5.2",

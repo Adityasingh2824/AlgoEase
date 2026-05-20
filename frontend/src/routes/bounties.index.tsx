@@ -1,9 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { Header } from "@/components/Header";
 import { BountyCard } from "@/components/BountyCard";
-import { bounties } from "@/data/bounties";
+import { bounties as staticBounties } from "@/data/bounties";
+import type { Bounty } from "@/components/BountyCard";
+import { mapApiBountyToCard } from "@/lib/bounties-api";
+import type { BountyData } from "@/hooks/useEscrow";
 import { X402Badge } from "@/components/X402Badge";
 import { useApp } from "@/lib/app-context";
+import { api } from "@/lib/api";
 import { Plus } from "lucide-react";
 
 const cats = ["All", "Smart Contract", "Design", "Tutorial", "1-on-1 Help", "Audit", "Shoutout"];
@@ -12,9 +17,15 @@ export const Route = createFileRoute("/bounties/")({
   head: () => ({
     meta: [
       { title: "Bounties — AlgoEase" },
-      { name: "description", content: "Browse open bounties funded in AlgoPy-powered Algorand escrow." },
+      {
+        name: "description",
+        content: "Browse open bounties funded in AlgoPy-powered Algorand escrow.",
+      },
       { property: "og:title", content: "Bounties — AlgoEase" },
-      { property: "og:description", content: "Browse open bounties funded in AlgoPy-powered Algorand escrow." },
+      {
+        property: "og:description",
+        content: "Browse open bounties funded in AlgoPy-powered Algorand escrow.",
+      },
     ],
   }),
   component: BountiesIndexPage,
@@ -23,6 +34,17 @@ export const Route = createFileRoute("/bounties/")({
 function BountiesIndexPage() {
   const { mode } = useApp();
   const navigate = useNavigate();
+  const [bounties, setBounties] = useState<Bounty[]>(staticBounties);
+
+  useEffect(() => {
+    api<{ bounties: BountyData[] }>("/api/bounties")
+      .then((data) => {
+        if (data.bounties.length > 0) {
+          setBounties(data.bounties.map((b, i) => mapApiBountyToCard(b, i)));
+        }
+      })
+      .catch(() => { /* fallback to static */ });
+  }, []);
 
   return (
     <div className="min-h-screen">
@@ -33,7 +55,9 @@ function BountiesIndexPage() {
             <h1 className="font-display text-4xl font-bold md:text-5xl">
               Open <span className="highlight-lemon">bounties</span>
             </h1>
-            <p className="mt-2 text-muted-foreground">Pick a task, deliver, and get paid automatically by the contract.</p>
+            <p className="mt-2 text-muted-foreground">
+              Pick a task, deliver, and get paid automatically by the contract.
+            </p>
             <div className="mt-3 flex items-center gap-2">
               <X402Badge />
               {mode === "agent" && <X402Badge variant="required" />}

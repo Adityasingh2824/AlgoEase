@@ -1,17 +1,19 @@
 [project]
 name = "algoease-contracts"
-version = "0.1.0"
-description = "AlgoEase v2 AlgoPy smart contracts"
-requires-python = ">=3.11"
+version = "2.0.0"
+description = "AlgoEase v2 AlgoPy smart contracts (BoxMap multi-escrow)"
+requires-python = ">=3.12"
 dependencies = [
-    "algopy",
+    "algorand-python>=3.5.0",
+    "puyapy>=5.8.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
+    "algorand-python-testing",
 ]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
-testpaths = ["tests"]
+pythonpath = ["src", "algoease_escrow"]
+testpaths = ["tests", "algoease_escrow/tests"]

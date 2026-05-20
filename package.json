@@ -4,25 +4,34 @@
   "version": "2.0.0",
   "description": "AlgoEase v2 monorepo",
   "workspaces": [
+    "shared",
     "frontend",
     "backend",
     "scripts"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace frontend",
+    "dev": "concurrently -n backend,frontend -c blue,magenta \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:frontend": "npm run dev --workspace frontend",
     "dev:backend": "npm run dev --workspace backend",
     "build": "npm run build --workspace frontend && npm run build --workspace backend",
     "build:frontend": "npm run build --workspace frontend",
     "build:backend": "npm run build --workspace backend",
     "lint": "npm run lint --workspace frontend && npm run lint --workspace backend",
-    "contracts:test": "python -m pytest contracts/tests -q",
+    "contracts:test": "python -m pytest contracts/tests contracts/algoease_escrow/tests -q",
     "contracts:check": "python -m compileall contracts",
+    "contracts:compile": "cd contracts/algoease_escrow && py -3.12 -m puyapy contract.py --out-dir=build",
+    "db:types": "cd backend && npx supabase gen types typescript --local > src/db/database.types.ts",
+    "db:migrate": "node backend/scripts/print-migrate-help.mjs",
+    "e2e": "npm run e2e --workspace scripts",
     "scripts:deploy": "npm run deploy --workspace scripts",
+    "scripts:fund-app": "npm run fund-app --workspace scripts",
     "scripts:testnet": "npm run testnet --workspace scripts"
   },
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=10.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }

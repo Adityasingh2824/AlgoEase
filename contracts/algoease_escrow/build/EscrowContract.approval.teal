@@ -1,0 +1,1117 @@
+#pragma version 11
+#pragma typetrack false
+
+// algopy.arc4.ARC4Contract.approval_program() -> uint64:
+main:
+    intcblock 0 1 8 2
+    bytecblock 0x657363 0x0000000000000003 "usdc_asset_id" 0x0000000000000001006a 0x0000 0x0000000000000002 0x0000000000000004
+    txn ApplicationID
+    bnz main_after_if_else@2
+    // contract.py:56
+    // self.usdc_asset_id = UInt64(0)
+    bytec_2 // "usdc_asset_id"
+    intc_0 // 0
+    app_global_put
+
+main_after_if_else@2:
+    // contract.py:51
+    // class EscrowContract(ARC4Contract):
+    txn NumAppArgs
+    bz main___algopy_default_create@20
+    txn OnCompletion
+    !
+    assert
+    txn ApplicationID
+    assert
+    pushbytess 0x671543f9 0xe3cdef3b 0x0206f592 0x2024b45d 0x089cf025 0x625c2113 0x365e8812 0x4a4f7af0 0x62f30152 0x20908025 0x88dff4e6 // method "configure(uint64)void", method "opt_in_asset(uint64)void", method "create_escrow(string,address,uint64,uint64,pay)void", method "create_escrow_usdc(string,address,uint64,uint64,axfer)void", method "accept_task(string)void", method "submit_work(string,string)void", method "reject_work(string)void", method "approve(string)void", method "release_payment(string)void", method "refund(string)void", method "get_status(string)uint64"
+    txna ApplicationArgs 0
+    match configure opt_in_asset create_escrow create_escrow_usdc accept_task submit_work reject_work approve release_payment refund get_status
+    err
+
+main___algopy_default_create@20:
+    txn OnCompletion
+    !
+    txn ApplicationID
+    !
+    &&
+    return
+
+
+// algoease_escrow.contract.EscrowContract.configure[routing]() -> void:
+configure:
+    // contract.py:63
+    // @arc4.abimethod
+    txna ApplicationArgs 1
+    dup
+    len
+    intc_2 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    // contract.py:66
+    // assert Txn.sender == Global.creator_address, "only creator"
+    txn Sender
+    global CreatorAddress
+    ==
+    assert // only creator
+    // contract.py:67
+    // self.usdc_asset_id = usdc_asset_id.native
+    btoi
+    bytec_2 // "usdc_asset_id"
+    swap
+    app_global_put
+    // contract.py:63
+    // @arc4.abimethod
+    intc_1 // 1
+    return
+
+
+// algoease_escrow.contract.EscrowContract.opt_in_asset[routing]() -> void:
+opt_in_asset:
+    // contract.py:69
+    // @arc4.abimethod
+    txna ApplicationArgs 1
+    dup
+    len
+    intc_2 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    btoi
+    // contract.py:72
+    // assert Txn.sender == Global.creator_address, "only creator"
+    txn Sender
+    global CreatorAddress
+    ==
+    assert // only creator
+    // contract.py:73-78
+    // itxn.AssetTransfer(
+    //     xfer_asset=asset,
+    //     asset_receiver=Global.current_application_address,
+    //     asset_amount=0,
+    //     fee=0,
+    // ).submit()
+    itxn_begin
+    // contract.py:75
+    // asset_receiver=Global.current_application_address,
+    global CurrentApplicationAddress
+    // contract.py:76
+    // asset_amount=0,
+    intc_0 // 0
+    itxn_field AssetAmount
+    itxn_field AssetReceiver
+    itxn_field XferAsset
+    // contract.py:73
+    // itxn.AssetTransfer(
+    pushint 4 // axfer
+    itxn_field TypeEnum
+    // contract.py:77
+    // fee=0,
+    intc_0 // 0
+    itxn_field Fee
+    // contract.py:73-78
+    // itxn.AssetTransfer(
+    //     xfer_asset=asset,
+    //     asset_receiver=Global.current_application_address,
+    //     asset_amount=0,
+    //     fee=0,
+    // ).submit()
+    itxn_submit
+    // contract.py:69
+    // @arc4.abimethod
+    intc_1 // 1
+    return
+
+
+// algoease_escrow.contract.EscrowContract.create_escrow[routing]() -> void:
+create_escrow:
+    // contract.py:80
+    // @arc4.abimethod
+    txna ApplicationArgs 1
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_3 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    txna ApplicationArgs 2
+    dup
+    cover 2
+    dup
+    len
+    pushint 32
+    ==
+    assert // invalid number of bytes for arc4.static_array<arc4.uint8, 32>
+    txna ApplicationArgs 3
+    dup
+    cover 3
+    len
+    intc_2 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    txna ApplicationArgs 4
+    dup
+    cover 3
+    len
+    intc_2 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    txn GroupIndex
+    intc_1 // 1
+    -
+    dup
+    gtxns TypeEnum
+    intc_1 // pay
+    ==
+    assert // transaction type is pay
+    // contract.py:94
+    // assert key not in self.escrows, "task_id already exists"
+    bytec_0 // 0x657363
+    uncover 3
+    concat
+    dup
+    cover 3
+    box_len
+    bury 1
+    !
+    assert // task_id already exists
+    // contract.py:96
+    // amount_native = fund.amount
+    dup
+    gtxns Amount
+    dup
+    cover 3
+    // contract.py:97
+    // assert amount_native > 0, "amount must be > 0"
+    assert // amount must be > 0
+    // contract.py:98
+    // assert fund.receiver == Global.current_application_address, "pay to app"
+    dup
+    gtxns Receiver
+    global CurrentApplicationAddress
+    ==
+    assert // pay to app
+    // contract.py:99
+    // assert fund.sender == Txn.sender, "payment sender must be caller"
+    dup
+    gtxns Sender
+    txn Sender
+    ==
+    assert // payment sender must be caller
+    // contract.py:100
+    // assert fund.close_remainder_to == Global.zero_address, "no close"
+    dup
+    gtxns CloseRemainderTo
+    global ZeroAddress
+    ==
+    assert // no close
+    // contract.py:101
+    // assert fund.rekey_to == Global.zero_address, "no rekey"
+    gtxns RekeyTo
+    global ZeroAddress
+    ==
+    assert // no rekey
+    // contract.py:61
+    // return freelancer == arc4.Address(Global.zero_address)
+    global ZeroAddress
+    ==
+    // contract.py:103-104
+    // # Zero address = open bounty; freelancer claims on accept_task.
+    // if not self.is_open_freelancer(freelancer):
+    bnz create_escrow_after_if_else@3
+    // contract.py:105
+    // assert freelancer.native != Txn.sender, "freelancer must differ from client"
+    dig 4
+    txn Sender
+    !=
+    assert // freelancer must differ from client
+
+create_escrow_after_if_else@3:
+    // contract.py:108
+    // client=arc4.Address(Txn.sender),
+    txn Sender
+    // contract.py:110
+    // amount=arc4.UInt64(amount_native),
+    dig 1
+    itob
+    // contract.py:114
+    // created_at=arc4.UInt64(Global.latest_timestamp),
+    global LatestTimestamp
+    itob
+    // contract.py:107-116
+    // self.escrows[key] = EscrowRecord(
+    //     client=arc4.Address(Txn.sender),
+    //     freelancer=freelancer,
+    //     amount=arc4.UInt64(amount_native),
+    //     usdc_asset_id=usdc_asset_id,
+    //     status=arc4.UInt64(STATUS_OPEN),
+    //     ipfs_hash=arc4.String(""),
+    //     created_at=arc4.UInt64(Global.latest_timestamp),
+    //     deadline=deadline,
+    // )
+    uncover 2
+    dig 7
+    concat
+    uncover 2
+    concat
+    dig 4
+    concat
+    bytec_3 // 0x0000000000000001006a
+    concat
+    swap
+    concat
+    dig 4
+    concat
+    // contract.py:113
+    // ipfs_hash=arc4.String(""),
+    bytec 4 // 0x0000
+    // contract.py:107-116
+    // self.escrows[key] = EscrowRecord(
+    //     client=arc4.Address(Txn.sender),
+    //     freelancer=freelancer,
+    //     amount=arc4.UInt64(amount_native),
+    //     usdc_asset_id=usdc_asset_id,
+    //     status=arc4.UInt64(STATUS_OPEN),
+    //     ipfs_hash=arc4.String(""),
+    //     created_at=arc4.UInt64(Global.latest_timestamp),
+    //     deadline=deadline,
+    // )
+    concat
+    dig 2
+    dup
+    box_del
+    pop
+    swap
+    box_put
+    // contract.py:80
+    // @arc4.abimethod
+    intc_1 // 1
+    return
+
+
+// algoease_escrow.contract.EscrowContract.create_escrow_usdc[routing]() -> void:
+create_escrow_usdc:
+    // contract.py:118
+    // @arc4.abimethod
+    txna ApplicationArgs 1
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_3 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    txna ApplicationArgs 2
+    dup
+    cover 2
+    dup
+    len
+    pushint 32
+    ==
+    assert // invalid number of bytes for arc4.static_array<arc4.uint8, 32>
+    txna ApplicationArgs 3
+    dup
+    cover 3
+    len
+    intc_2 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    txna ApplicationArgs 4
+    dup
+    cover 3
+    dup
+    len
+    intc_2 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    txn GroupIndex
+    intc_1 // 1
+    -
+    dup
+    gtxns TypeEnum
+    pushint 4 // axfer
+    ==
+    assert // transaction type is axfer
+    // contract.py:129
+    // assert key not in self.escrows, "task_id already exists"
+    bytec_0 // 0x657363
+    uncover 4
+    concat
+    dup
+    cover 4
+    box_len
+    bury 1
+    !
+    assert // task_id already exists
+    // contract.py:131
+    // amount_native = fund.asset_amount
+    dup
+    gtxns AssetAmount
+    dup
+    cover 4
+    // contract.py:132
+    // assert amount_native > 0, "amount must be > 0"
+    assert // amount must be > 0
+    // contract.py:133
+    // assert fund.asset_receiver == Global.current_application_address, "pay to app"
+    dup
+    gtxns AssetReceiver
+    global CurrentApplicationAddress
+    ==
+    assert // pay to app
+    // contract.py:134
+    // assert fund.sender == Txn.sender, "payment sender must be caller"
+    dup
+    gtxns Sender
+    txn Sender
+    ==
+    assert // payment sender must be caller
+    // contract.py:135
+    // assert fund.asset_close_to == Global.zero_address, "no close"
+    dup
+    gtxns AssetCloseTo
+    global ZeroAddress
+    ==
+    assert // no close
+    // contract.py:136
+    // assert fund.rekey_to == Global.zero_address, "no rekey"
+    dup
+    gtxns RekeyTo
+    global ZeroAddress
+    ==
+    assert // no rekey
+    // contract.py:137
+    // assert fund.xfer_asset.id == usdc_asset_id.native, "asset mismatch"
+    gtxns XferAsset
+    swap
+    btoi
+    ==
+    assert // asset mismatch
+    // contract.py:61
+    // return freelancer == arc4.Address(Global.zero_address)
+    global ZeroAddress
+    ==
+    // contract.py:139
+    // if not self.is_open_freelancer(freelancer):
+    bnz create_escrow_usdc_after_if_else@3
+    // contract.py:140
+    // assert freelancer.native != Txn.sender, "freelancer must differ from client"
+    dig 4
+    txn Sender
+    !=
+    assert // freelancer must differ from client
+
+create_escrow_usdc_after_if_else@3:
+    // contract.py:143
+    // client=arc4.Address(Txn.sender),
+    txn Sender
+    // contract.py:145
+    // amount=arc4.UInt64(amount_native),
+    dig 1
+    itob
+    // contract.py:149
+    // created_at=arc4.UInt64(Global.latest_timestamp),
+    global LatestTimestamp
+    itob
+    // contract.py:142-151
+    // self.escrows[key] = EscrowRecord(
+    //     client=arc4.Address(Txn.sender),
+    //     freelancer=freelancer,
+    //     amount=arc4.UInt64(amount_native),
+    //     usdc_asset_id=usdc_asset_id,
+    //     status=arc4.UInt64(STATUS_OPEN),
+    //     ipfs_hash=arc4.String(""),
+    //     created_at=arc4.UInt64(Global.latest_timestamp),
+    //     deadline=deadline,
+    // )
+    uncover 2
+    dig 7
+    concat
+    uncover 2
+    concat
+    dig 4
+    concat
+    bytec_3 // 0x0000000000000001006a
+    concat
+    swap
+    concat
+    dig 4
+    concat
+    // contract.py:148
+    // ipfs_hash=arc4.String(""),
+    bytec 4 // 0x0000
+    // contract.py:142-151
+    // self.escrows[key] = EscrowRecord(
+    //     client=arc4.Address(Txn.sender),
+    //     freelancer=freelancer,
+    //     amount=arc4.UInt64(amount_native),
+    //     usdc_asset_id=usdc_asset_id,
+    //     status=arc4.UInt64(STATUS_OPEN),
+    //     ipfs_hash=arc4.String(""),
+    //     created_at=arc4.UInt64(Global.latest_timestamp),
+    //     deadline=deadline,
+    // )
+    concat
+    dig 2
+    dup
+    box_del
+    pop
+    swap
+    box_put
+    // contract.py:118
+    // @arc4.abimethod
+    intc_1 // 1
+    return
+
+
+// algoease_escrow.contract.EscrowContract.accept_task[routing]() -> void:
+accept_task:
+    // contract.py:153
+    // @arc4.abimethod
+    txna ApplicationArgs 1
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_3 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    // contract.py:157
+    // record = self.escrows[key].copy()
+    bytec_0 // 0x657363
+    swap
+    concat
+    dupn 2
+    box_get
+    swap
+    cover 2
+    assert // check self.escrows entry exists
+    // contract.py:157-158
+    // record = self.escrows[key].copy()
+    // assert record.status == arc4.UInt64(STATUS_OPEN), "not OPEN"
+    dup
+    pushint 80
+    intc_2 // 8
+    box_extract // on error: index out of bounds
+    // contract.py:158
+    // assert record.status == arc4.UInt64(STATUS_OPEN), "not OPEN"
+    pushbytes 0x0000000000000001
+    b==
+    assert // not OPEN
+    // contract.py:160
+    // if self.is_open_freelancer(record.freelancer):
+    pushint 32
+    dup
+    box_extract // on error: index out of bounds
+    dup
+    // contract.py:61
+    // return freelancer == arc4.Address(Global.zero_address)
+    global ZeroAddress
+    ==
+    // contract.py:160
+    // if self.is_open_freelancer(record.freelancer):
+    bz accept_task_else_body@3
+    // contract.py:161
+    // assert Txn.sender != record.client.native, "freelancer must differ from client"
+    txn Sender
+    dig 3
+    intc_0 // 0
+    pushint 32
+    box_extract // on error: index out of bounds
+    !=
+    assert // freelancer must differ from client
+    // contract.py:162
+    // record.freelancer = arc4.Address(Txn.sender)
+    dig 1
+    txn Sender
+    replace2 32
+    bury 2
+
+accept_task_after_if_else@4:
+    // contract.py:166
+    // record.status = arc4.UInt64(STATUS_ACCEPTED)
+    dig 1
+    bytec 5 // 0x0000000000000002
+    replace2 80
+    // contract.py:167
+    // self.escrows[key] = record.copy()
+    dig 3
+    dup
+    box_del
+    pop
+    swap
+    box_put
+    // contract.py:153
+    // @arc4.abimethod
+    intc_1 // 1
+    return
+
+accept_task_else_body@3:
+    // contract.py:164
+    // assert Txn.sender == record.freelancer.native, "only freelancer"
+    txn Sender
+    dig 1
+    ==
+    assert // only freelancer
+    b accept_task_after_if_else@4
+
+
+// algoease_escrow.contract.EscrowContract.submit_work[routing]() -> void:
+submit_work:
+    // contract.py:169
+    // @arc4.abimethod
+    txna ApplicationArgs 1
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_3 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    txna ApplicationArgs 2
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_3 // 2
+    +
+    dig 1
+    len
+    dup
+    uncover 2
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    // contract.py:173
+    // record = self.escrows[key].copy()
+    bytec_0 // 0x657363
+    uncover 3
+    concat
+    dup
+    box_get
+    assert // check self.escrows entry exists
+    // contract.py:173-174
+    // record = self.escrows[key].copy()
+    // assert record.status == arc4.UInt64(STATUS_ACCEPTED), "not ACCEPTED"
+    dig 1
+    pushint 80
+    intc_2 // 8
+    box_extract // on error: index out of bounds
+    // contract.py:174
+    // assert record.status == arc4.UInt64(STATUS_ACCEPTED), "not ACCEPTED"
+    bytec 5 // 0x0000000000000002
+    b==
+    assert // not ACCEPTED
+    // contract.py:175
+    // assert Txn.sender == record.freelancer.native, "only freelancer"
+    txn Sender
+    dig 2
+    pushint 32
+    dup
+    box_extract // on error: index out of bounds
+    ==
+    assert // only freelancer
+    // contract.py:176
+    // assert ipfs_cid.bytes.length > 0, "ipfs_cid required"
+    uncover 2
+    assert // ipfs_cid required
+    // contract.py:178
+    // record.status = arc4.UInt64(STATUS_SUBMITTED)
+    bytec_1 // 0x0000000000000003
+    replace2 80
+    // contract.py:179
+    // record.ipfs_hash = ipfs_cid
+    dup
+    pushint 88
+    extract_uint16
+    intc_0 // 0
+    swap
+    extract3
+    uncover 2
+    concat
+    // contract.py:180
+    // self.escrows[key] = record.copy()
+    dig 1
+    box_del
+    pop
+    box_put
+    // contract.py:169
+    // @arc4.abimethod
+    intc_1 // 1
+    return
+
+
+// algoease_escrow.contract.EscrowContract.reject_work[routing]() -> void:
+reject_work:
+    // contract.py:219
+    // @arc4.abimethod
+    txna ApplicationArgs 1
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_3 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    // contract.py:223
+    // record = self.escrows[key].copy()
+    bytec_0 // 0x657363
+    dig 1
+    concat
+    dup
+    box_get
+    assert // check self.escrows entry exists
+    // contract.py:223-224
+    // record = self.escrows[key].copy()
+    // assert record.status == arc4.UInt64(STATUS_SUBMITTED), "not SUBMITTED"
+    dig 1
+    pushint 80
+    intc_2 // 8
+    box_extract // on error: index out of bounds
+    // contract.py:224
+    // assert record.status == arc4.UInt64(STATUS_SUBMITTED), "not SUBMITTED"
+    bytec_1 // 0x0000000000000003
+    b==
+    assert // not SUBMITTED
+    // contract.py:225
+    // assert Txn.sender == record.client.native, "only client"
+    txn Sender
+    uncover 2
+    intc_0 // 0
+    pushint 32
+    box_extract // on error: index out of bounds
+    ==
+    assert // only client
+    // contract.py:226
+    // self._refund_client(record, key)
+    swap
+    callsub _refund_client
+    pop
+    // contract.py:219
+    // @arc4.abimethod
+    intc_1 // 1
+    return
+
+
+// algoease_escrow.contract.EscrowContract.approve[routing]() -> void:
+approve:
+    // contract.py:228
+    // @arc4.abimethod
+    txna ApplicationArgs 1
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_3 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    // contract.py:232
+    // record = self.escrows[key].copy()
+    bytec_0 // 0x657363
+    swap
+    concat
+    // contract.py:232-233
+    // record = self.escrows[key].copy()
+    // assert record.status == arc4.UInt64(STATUS_SUBMITTED), "not SUBMITTED"
+    dup
+    pushint 80
+    intc_2 // 8
+    box_extract // on error: index out of bounds
+    // contract.py:233
+    // assert record.status == arc4.UInt64(STATUS_SUBMITTED), "not SUBMITTED"
+    bytec_1 // 0x0000000000000003
+    b==
+    assert // not SUBMITTED
+    // contract.py:234
+    // assert Txn.sender == record.client.native, "only client"
+    txn Sender
+    dig 1
+    intc_0 // 0
+    pushint 32
+    box_extract // on error: index out of bounds
+    ==
+    assert // only client
+    // contract.py:236-237
+    // record.status = arc4.UInt64(STATUS_APPROVED)
+    // self.escrows[key] = record.copy()
+    pushint 80
+    // contract.py:236
+    // record.status = arc4.UInt64(STATUS_APPROVED)
+    bytec 6 // 0x0000000000000004
+    // contract.py:236-237
+    // record.status = arc4.UInt64(STATUS_APPROVED)
+    // self.escrows[key] = record.copy()
+    box_replace // on error: index out of bounds
+    // contract.py:228
+    // @arc4.abimethod
+    intc_1 // 1
+    return
+
+
+// algoease_escrow.contract.EscrowContract.release_payment[routing]() -> void:
+release_payment:
+    // contract.py:239
+    // @arc4.abimethod
+    txna ApplicationArgs 1
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_3 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    // contract.py:243
+    // record = self.escrows[key].copy()
+    bytec_0 // 0x657363
+    swap
+    concat
+    // contract.py:243-244
+    // record = self.escrows[key].copy()
+    // assert record.status == arc4.UInt64(STATUS_APPROVED), "not APPROVED"
+    dup
+    pushint 80
+    intc_2 // 8
+    box_extract // on error: index out of bounds
+    // contract.py:244
+    // assert record.status == arc4.UInt64(STATUS_APPROVED), "not APPROVED"
+    bytec 6 // 0x0000000000000004
+    b==
+    assert // not APPROVED
+    // contract.py:245
+    // assert Txn.sender == record.client.native, "only client"
+    txn Sender
+    dig 1
+    intc_0 // 0
+    pushint 32
+    box_extract // on error: index out of bounds
+    ==
+    assert // only client
+    // contract.py:247
+    // assert record.amount.native > 0, "no funds"
+    dup
+    pushint 64
+    intc_2 // 8
+    box_extract // on error: index out of bounds
+    dup
+    btoi
+    assert // no funds
+    // contract.py:249
+    // freelancer = record.freelancer.native
+    dig 1
+    pushint 32
+    dup
+    box_extract // on error: index out of bounds
+    // contract.py:250
+    // del self.escrows[key]
+    dig 2
+    box_del
+    pop
+    // contract.py:251
+    // self._send_escrow_payout(freelancer, record.amount, record.usdc_asset_id)
+    uncover 2
+    pushint 72
+    intc_2 // 8
+    box_extract // on error: index out of bounds
+    swap
+    cover 2
+    callsub _send_escrow_payout
+    // contract.py:239
+    // @arc4.abimethod
+    intc_1 // 1
+    return
+
+
+// algoease_escrow.contract.EscrowContract.refund[routing]() -> void:
+refund:
+    // contract.py:253
+    // @arc4.abimethod
+    txna ApplicationArgs 1
+    dupn 2
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_3 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    // contract.py:257
+    // record = self.escrows[key].copy()
+    bytec_0 // 0x657363
+    swap
+    concat
+    dup
+    box_get
+    swap
+    cover 2
+    assert // check self.escrows entry exists
+    // contract.py:258
+    // assert Txn.sender == record.client.native, "only client"
+    txn Sender
+    // contract.py:257-258
+    // record = self.escrows[key].copy()
+    // assert Txn.sender == record.client.native, "only client"
+    dig 1
+    intc_0 // 0
+    pushint 32
+    box_extract // on error: index out of bounds
+    // contract.py:258
+    // assert Txn.sender == record.client.native, "only client"
+    ==
+    assert // only client
+    // contract.py:260
+    // status = record.status.native
+    dup
+    pushint 80
+    intc_2 // 8
+    box_extract // on error: index out of bounds
+    btoi
+    dup
+    uncover 2
+    // contract.py:261
+    // deadline = record.deadline.native
+    pushint 98
+    intc_2 // 8
+    box_extract // on error: index out of bounds
+    btoi
+    swap
+    // contract.py:262
+    // now = Global.latest_timestamp
+    global LatestTimestamp
+    swap
+    // contract.py:266
+    // status == STATUS_OPEN or status == STATUS_ACCEPTED or status == STATUS_SUBMITTED
+    intc_1 // 1
+    ==
+    bnz refund_bool_true@4
+    dig 2
+    intc_3 // 2
+    ==
+    bnz refund_bool_true@4
+    dig 2
+    pushint 3
+    ==
+    bz refund_bool_false@5
+
+refund_bool_true@4:
+    intc_1 // 1
+
+refund_bool_merge@6:
+    // contract.py:268
+    // assert is_refundable_status, "refund not allowed"
+    assert // refund not allowed
+    // contract.py:269-270
+    // # After SUBMITTED, require deadline to have passed
+    // if status == STATUS_SUBMITTED:
+    dig 2
+    pushint 3
+    ==
+    bz refund_after_if_else@8
+    // contract.py:271
+    // assert now >= deadline, "deadline not reached"
+    dup
+    dig 2
+    >=
+    assert // deadline not reached
+
+refund_after_if_else@8:
+    // contract.py:273
+    // self._refund_client(record, key)
+    dig 3
+    dig 5
+    callsub _refund_client
+    pop
+    // contract.py:253
+    // @arc4.abimethod
+    intc_1 // 1
+    return
+
+refund_bool_false@5:
+    intc_0 // 0
+    b refund_bool_merge@6
+
+
+// algoease_escrow.contract.EscrowContract.get_status[routing]() -> void:
+get_status:
+    // contract.py:275
+    // @arc4.abimethod(readonly=True)
+    txna ApplicationArgs 1
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_3 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    // contract.py:279
+    // record = self.escrows[key].copy()
+    bytec_0 // 0x657363
+    swap
+    concat
+    // contract.py:279-280
+    // record = self.escrows[key].copy()
+    // return record.status
+    pushint 80
+    intc_2 // 8
+    box_extract // on error: index out of bounds
+    // contract.py:275
+    // @arc4.abimethod(readonly=True)
+    pushbytes 0x151f7c75
+    swap
+    concat
+    log
+    intc_1 // 1
+    return
+
+
+// algoease_escrow.contract.EscrowContract._send_escrow_payout(receiver: bytes, amount: bytes, asset_id: bytes) -> void:
+_send_escrow_payout:
+    // contract.py:182-188
+    // @subroutine
+    // def _send_escrow_payout(
+    //     self,
+    //     receiver: Account,
+    //     amount: arc4.UInt64,
+    //     asset_id: arc4.UInt64,
+    // ) -> None:
+    proto 3 0
+    // contract.py:190
+    // payout = amount.native
+    frame_dig -2
+    btoi
+    dupn 2
+    // contract.py:191
+    // assert payout > 0, "no funds"
+    assert // no funds
+    // contract.py:192
+    // app = Global.current_application_address
+    global CurrentApplicationAddress
+    // contract.py:193
+    // available = app.balance - app.min_balance
+    dup
+    acct_params_get AcctBalance
+    assert // account funded
+    swap
+    acct_params_get AcctMinBalance
+    assert // account funded
+    -
+    // contract.py:194
+    // assert available >= payout, "insufficient escrow liquidity"
+    <=
+    assert // insufficient escrow liquidity
+    // contract.py:196
+    // asset_native = asset_id.native
+    frame_dig -1
+    btoi
+    dup
+    cover 2
+    // contract.py:197
+    // if asset_native > 0:
+    bz _send_escrow_payout_else_body@3
+    // contract.py:198-203
+    // itxn.AssetTransfer(
+    //     xfer_asset=Asset(asset_native),
+    //     asset_receiver=receiver,
+    //     asset_amount=payout,
+    //     fee=0,
+    // ).submit()
+    itxn_begin
+    itxn_field AssetAmount
+    frame_dig -3
+    itxn_field AssetReceiver
+    frame_dig 0
+    itxn_field XferAsset
+    // contract.py:198
+    // itxn.AssetTransfer(
+    pushint 4 // axfer
+    itxn_field TypeEnum
+    // contract.py:202
+    // fee=0,
+    intc_0 // 0
+    itxn_field Fee
+    // contract.py:198-203
+    // itxn.AssetTransfer(
+    //     xfer_asset=Asset(asset_native),
+    //     asset_receiver=receiver,
+    //     asset_amount=payout,
+    //     fee=0,
+    // ).submit()
+    itxn_submit
+    retsub
+
+_send_escrow_payout_else_body@3:
+    // contract.py:205-209
+    // itxn.Payment(
+    //     receiver=receiver,
+    //     amount=payout,
+    //     fee=0,
+    // ).submit()
+    itxn_begin
+    itxn_field Amount
+    frame_dig -3
+    itxn_field Receiver
+    // contract.py:205
+    // itxn.Payment(
+    intc_1 // pay
+    itxn_field TypeEnum
+    // contract.py:208
+    // fee=0,
+    intc_0 // 0
+    itxn_field Fee
+    // contract.py:205-209
+    // itxn.Payment(
+    //     receiver=receiver,
+    //     amount=payout,
+    //     fee=0,
+    // ).submit()
+    itxn_submit
+    retsub
+
+
+// algoease_escrow.contract.EscrowContract._refund_client(record: bytes, key: bytes) -> bytes:
+_refund_client:
+    // contract.py:211-212
+    // @subroutine
+    // def _refund_client(self, record: EscrowRecord, key: Bytes) -> None:
+    proto 2 1
+    // contract.py:214
+    // assert record.amount.native > 0, "no funds"
+    frame_dig -2
+    extract 64 8
+    frame_dig -2
+    pushint 64
+    extract_uint64
+    assert // no funds
+    // contract.py:215
+    // client = record.client.native
+    frame_dig -2
+    extract 0 32
+    // contract.py:216
+    // del self.escrows[key]
+    bytec_0 // 0x657363
+    frame_dig -1
+    concat
+    box_del
+    pop
+    // contract.py:217
+    // self._send_escrow_payout(client, record.amount, record.usdc_asset_id)
+    frame_dig -2
+    extract 72 8
+    swap
+    cover 2
+    callsub _send_escrow_payout
+    frame_dig -2
+    retsub

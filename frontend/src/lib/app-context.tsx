@@ -1,6 +1,18 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import type { Transaction } from "algosdk";
-import { ensureWalletService, type WalletTxnKind, type WalletType } from "@/lib/wallet/wallet-service";
+import {
+  ensureWalletService,
+  type WalletTxnKind,
+  type WalletType,
+} from "@/lib/wallet/wallet-service";
 
 type Mode = "human" | "agent";
 type Theme = "light" | "dark";
@@ -19,7 +31,10 @@ type AppCtx = {
   connectWallet: (walletType: WalletType) => Promise<void>;
   disconnectWallet: () => Promise<void>;
   signWalletTransaction: (txn: Transaction | Transaction[]) => Promise<Uint8Array[]>;
-  signWalletTransactionByKind: (kind: WalletTxnKind, txn: Transaction | Transaction[]) => Promise<Uint8Array[]>;
+  signWalletTransactionByKind: (
+    kind: WalletTxnKind,
+    txn: Transaction | Transaction[],
+  ) => Promise<Uint8Array[]>;
   signFlowTransaction: (kind: WalletTxnKind, amountAlgo: number) => Promise<Uint8Array[]>;
 };
 
@@ -60,7 +75,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const t = (typeof localStorage !== "undefined" && localStorage.getItem("theme")) as Theme | null;
+    const t = (typeof localStorage !== "undefined" &&
+      localStorage.getItem("theme")) as Theme | null;
     const m = (typeof localStorage !== "undefined" && localStorage.getItem("mode")) as Mode | null;
     if (t) setTheme(t);
     if (m) setMode(m);
@@ -97,20 +113,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (typeof localStorage !== "undefined") localStorage.setItem("mode", mode);
   }, [mode]);
 
-  const connectWallet = useCallback(async (selectedWallet: WalletType) => {
-    const service = await ensureWalletService();
-    if (!service) return;
-    try {
-      setWalletStatus("connecting");
-      setWalletError(null);
-      await service.connect(selectedWallet);
-      await refreshWalletState();
-    } catch {
-      setWalletStatus("error");
-      setWalletError("Wallet connection failed");
-      throw new Error("Wallet connection failed");
-    }
-  }, [refreshWalletState]);
+  const connectWallet = useCallback(
+    async (selectedWallet: WalletType) => {
+      const service = await ensureWalletService();
+      if (!service) return;
+      try {
+        setWalletStatus("connecting");
+        setWalletError(null);
+        await service.connect(selectedWallet);
+        await refreshWalletState();
+      } catch {
+        setWalletStatus("error");
+        setWalletError("Wallet connection failed");
+        throw new Error("Wallet connection failed");
+      }
+    },
+    [refreshWalletState],
+  );
 
   const disconnectWallet = useCallback(async () => {
     const service = await ensureWalletService();
@@ -177,11 +196,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ],
   );
 
-  return (
-    <Ctx.Provider value={value}>
-      {children}
-    </Ctx.Provider>
-  );
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 export function useApp() {

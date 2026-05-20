@@ -12,16 +12,20 @@ function toWalletId(walletType: WalletType): WalletId {
 export class AlgoEaseWalletService {
   private manager: WalletManager;
 
+  get algodClient() {
+    return this.manager.algodClient;
+  }
+
   constructor() {
     this.manager = new WalletManager({
       wallets: [
         {
           id: WalletId.PERA,
-          options: { chainId: 416002, shouldShowSignTxnToast: false },
+          options: { chainId: 416002, shouldShowSignTxnToast: true },
         },
         {
           id: WalletId.DEFLY,
-          options: { chainId: 416002, shouldShowSignTxnToast: false },
+          options: { chainId: 416002, shouldShowSignTxnToast: true },
         },
       ],
       defaultNetwork: NetworkId.TESTNET,
@@ -66,12 +70,23 @@ export class AlgoEaseWalletService {
     if (!wallet?.activeAddress) throw new Error("Connect wallet first");
 
     const txns = Array.isArray(txn) ? txn : [txn];
-    if (txns.length > 1) {
+    // Do not re-assign group id when ATC (or caller) already grouped the txns.
+    const needsGroup =
+      txns.length > 1 &&
+      !txns.every((t) => {
+        const group = t.group;
+        return group instanceof Uint8Array ? group.length > 0 : Boolean(group);
+      });
+    if (needsGroup) {
       algosdk.assignGroupID(txns);
     }
 
     const signed = await wallet.signTransactions(txns);
-    return signed.filter((blob): blob is Uint8Array => blob instanceof Uint8Array);
+    const blobs = signed.filter((blob): blob is Uint8Array => blob instanceof Uint8Array);
+    if (blobs.length !== txns.length) {
+      throw new Error("Wallet did not return a signature for every transaction.");
+    }
+    return blobs;
   }
 
   async signByKind(kind: WalletTxnKind, txn: Transaction | Transaction[]) {
@@ -86,8 +101,8 @@ export class AlgoEaseWalletService {
     if (!address) throw new Error("Connect wallet first");
     const suggestedParams = await this.manager.algodClient.getTransactionParams().do();
     const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-      from: address,
-      to: address,
+      sender: address,
+      receiver: address,
       amount: Math.max(0, Math.round(amountAlgo * MICROALGOS_IN_ALGO)),
       note: new TextEncoder().encode(`algoease:${kind}`),
       suggestedParams,

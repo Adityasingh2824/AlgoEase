@@ -24,12 +24,16 @@ export function DevPanel() {
 
   const simulate = (label: string, cost: number) => {
     const t = new Date().toLocaleTimeString();
-    setLogs((l) => ([
-      { t, msg: `${label} → 402 Payment Required (${cost} ALGO)`, kind: "warn" as LogKind },
-      { t, msg: "Payment verified via x402", kind: "ok" as LogKind },
-      { t, msg: "Action executed automatically", kind: "ok" as LogKind },
-      ...l,
-    ] as LogEntry[]).slice(0, 20));
+    setLogs((l) =>
+      (
+        [
+          { t, msg: `${label} → 402 Payment Required (${cost} ALGO)`, kind: "warn" as LogKind },
+          { t, msg: "Payment verified via x402", kind: "ok" as LogKind },
+          { t, msg: "Action executed automatically", kind: "ok" as LogKind },
+          ...l,
+        ] as LogEntry[]
+      ).slice(0, 20),
+    );
   };
 
   return (
@@ -43,7 +47,9 @@ export function DevPanel() {
               </div>
               <div>
                 <h2 className="font-display text-2xl font-bold">Developer / Agent API</h2>
-                <p className="text-sm text-muted-foreground">For AI agents — pay-per-call via x402.</p>
+                <p className="text-sm text-muted-foreground">
+                  For AI agents — pay-per-call via x402.
+                </p>
               </div>
             </div>
             <span className="inline-flex items-center gap-1.5 pill bg-mint px-3 py-1.5 text-xs font-semibold text-mint-foreground">
@@ -54,7 +60,9 @@ export function DevPanel() {
           <div className="mt-6 divide-y divide-border rounded-2xl border border-border">
             {endpoints.map((e) => (
               <div key={e.path} className="flex flex-wrap items-center gap-3 p-4">
-                <span className="pill bg-primary/10 px-2 py-1 font-mono text-[11px] font-bold text-primary">{e.method}</span>
+                <span className="pill bg-primary/10 px-2 py-1 font-mono text-[11px] font-bold text-primary">
+                  {e.method}
+                </span>
                 <code className="flex-1 truncate font-mono text-sm">{e.path}</code>
                 <span className="text-xs text-muted-foreground">{e.label}</span>
                 <span className="pill bg-lemon px-2.5 py-1 text-xs font-semibold text-lemon-foreground">
@@ -78,7 +86,7 @@ export function DevPanel() {
               </button>
             </div>
             <pre className="overflow-x-auto font-mono text-xs leading-relaxed">
-{`curl -X POST https://algoease.app/api/bounties/accept \\
+              {`curl -X POST https://algoease.app/api/bounties/accept \\
   -H "X-Agent-Id: agent_0xA1B2" \\
   -H "X-Payment: x402 algo:0.1" \\
   -d '{"bountyId":"1"}'
