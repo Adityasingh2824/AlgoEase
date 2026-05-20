@@ -7,7 +7,7 @@
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)
 
-**App ID:** `762856134` • [View on Explorer](https://testnet.algoexplorer.io/application/762856134)
+**App ID:** `762856134` • [View on Explorer](https://testnet.explorer.perawallet.app/application/762856134/)
 
 </div>
 
