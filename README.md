@@ -60,8 +60,7 @@ AlgoEase v2 is a trustless escrow system that enables secure freelance payments 
 ### Testnet Contract
 - **App ID**: `762856134`
 - **Address**: `PPBVQIUUEMYH7EYSJ4QJ5HGT2LZADEDAEKJPUZQ4EQQZQ3K6MLRKAHUJOE`
-- 🔍 [View on AlgoExplorer](https://testnet.algoexplorer.io/application/762856134)
-- 🔍 [View on Pera Explorer](https://explorer.perawallet.app/application/762856134/?network=testnet)
+- 🔍 [View on Pera Explorer](https://testnet.explorer.perawallet.app/application/762856134/)
 - 🔍 [Recent Transactions](https://testnet.algoexplorer.io/application/762856134/transactions)
 
 ### Resources
@@ -144,13 +143,13 @@ The x402 protocol ensures payment atomicity by coupling HTTP requests with block
 | **App ID** | `762856134` |
 | **Contract Address** | `PPBVQIUUEMYH7EYSJ4QJ5HGT2LZADEDAEKJPUZQ4EQQZQ3K6MLRKAHUJOE` |
 | **Network** | Algorand Testnet |
-| **Creation Tx** | [View on AlgoExplorer](https://testnet.algoexplorer.io/application/762856134) |
+| **Creation Tx** | [View on AlgoExplorer](https://testnet.explorer.perawallet.app/application/762856134/) |
 | **USDC Asset ID** | `10458941` (USDC-A testnet) |
 | **Status** | ✅ Active |
 
 **Explorer Links:**
 - 🔍 [AlgoExplorer](https://testnet.algoexplorer.io/application/762856134)
-- 🔍 [Pera Explorer](https://explorer.perawallet.app/application/762856134/?network=testnet)
+- 🔍 [Pera Explorer](https://testnet.explorer.perawallet.app/application/762856134/)
 - 🔍 [GoalSeeker](https://goalseeker.purestake.io/algorand/testnet/application/762856134)
 - 🔍 [NFDomains](https://app.nf.domains/search/?query=762856134&view=simple&network=testnet)
 
@@ -189,13 +188,13 @@ curl https://testnet-api.algonode.cloud/v2/applications/762856134
 **Contract ABI:**
 The full ARC-4 ABI contract specification is available at:
 - `contracts/algoease_escrow/build/EscrowContract.arc32.json`
-- Or view on [AlgoExplorer ABI tab](https://testnet.algoexplorer.io/application/762856134)
+- Or view on [AlgoExplorer ABI tab](https://testnet.explorer.perawallet.app/application/762856134/)
 
 ### Recent Transactions
 
 View recent escrow activity:
 - [All Transactions](https://testnet.algoexplorer.io/application/762856134/transactions)
-- [Application Calls](https://testnet.algoexplorer.io/application/762856134/transactions?type=appl)
+- [Application Calls](https://testnet.explorer.perawallet.app/application/762856134/)
 
 ---
 
